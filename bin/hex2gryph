@@ -1,0 +1,256 @@
+#!/usr/bin/php
+<?php
+require_once dirname(__FILE__) . "/../lib/defines.php";
+
+/*
+ * globals
+ */
+
+$hex_dir = "";
+$gryph_dir = "";
+$block_filename = "";
+
+$block_data = null;
+$hex_data = null;
+$digit_image = null;
+
+/*
+ * functions
+ */
+
+function draw_digit ($image, $x, $y, $number, $padding = false)
+{
+	global $digit_image;
+
+	if (is_int($number)) {
+		$format = $padding ? "%0X" : "%X";
+		$number = sprintf($format, $number);
+	}
+
+	for ($i = 0, $goal = strlen($number); $i < $goal; $i++, $x += 6) {
+		$n = intval($number[$i], 16);
+		ImageCopy(
+			$image, $digit_image,
+			$x, $y,
+			$n * 6, 0, 6, 12);
+	}
+}
+
+function draw_buffer ($image, $x, $y, $cp)
+{
+	global $hex_data;
+
+	if (!isset($hex_data[$cp])) {
+		return;
+	}
+
+	$data = $hex_data[$cp];
+	$color = ImageColorAllocate($image, 0, 0, 0);
+	$count = count($data);
+	if ($count == FONT_HEIGHT * 2) {
+		for ($i = 0; $i < $count; $i += 2, $y++) {
+			$offsetx = 0;
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i + 1] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+		}
+	}
+	elseif ($count == FONT_HEIGHT) {
+		for ($i = 0; $i < $count; $i++, $y++) {
+			$offsetx = 0;
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+		}
+	}
+}
+
+function make_gryph ()
+{
+	global $hex_data, $block_data, $gryph_dir;
+
+	$cell_image = create_cell_image(CELL_WIDTH, CELL_HEIGHT, false);
+	$cell_image_bi = create_cell_image(CELL_WIDTH, CELL_HEIGHT, true);
+	$canvas_width = (GRID_HORZ_COUNT + 2) * CELL_WIDTH;
+
+	foreach ($block_data as $block_index => $block) {
+		$from = $block["from"];
+		$to = $block["to"];
+		$range = $to - $from + 1;
+		$canvas_height = (ceil($range / GRID_HORZ_COUNT) + 2) * CELL_HEIGHT;
+
+		$canvas = ImageCreateTruecolor($canvas_width, $canvas_height);
+		ImageFilledrectangle(
+			$canvas,
+			0, 0, $canvas_width - 1, $canvas_height - 1,
+			ImageColorAllocate($cell_image, 255, 255, 255));
+
+		$copied = false;
+		for ($i = $from; $i <= $to; $i++) {
+			if (!isset($hex_data[$i])) {
+				if ($i % 8192 == 0) {
+					sleep(1);
+				}
+				continue;
+			}
+
+			$data_length = count($hex_data[$i]);
+			if ($data_length == FONT_HEIGHT) {
+				$src_image = $cell_image;
+			}
+			elseif ($data_length == FONT_HEIGHT * 2) {
+				$src_image = $cell_image_bi;
+			}
+			else {
+				throw new Exception(sprintf("invalid data length of U+%04X", $i));
+			}
+
+			$x = ($i - $from) % GRID_HORZ_COUNT;
+			$y = floor(($i - $from) / GRID_HORZ_COUNT);
+			$px = ($x + 1) * CELL_WIDTH;
+			$py = ($y + 1) * CELL_HEIGHT;
+
+			if ($y == 0) {
+				draw_digit($canvas, $px, $py - 12, $x & 0x000f);
+
+				if ($x % 16 == 0) {
+					draw_digit($canvas, $px, 4, sprintf("%04X", $i));
+				}
+			}
+
+			ImageCopy(
+				$canvas, $src_image,
+				$px, $py,
+				0, 0, CELL_WIDTH - 1, CELL_HEIGHT - 1);
+
+			draw_buffer($canvas, $px + CELL_MARGIN, $py + CELL_MARGIN, $i);
+			$copied = true;
+		}
+
+		if ($copied) {
+			$filename = $gryph_dir
+				. "/"
+				. get_gryph_filename($block_index, $block["name"]);
+			ImagePng($canvas, $filename, 9);
+
+			fwrite(STDERR, sprintf(
+				"%04X-%04X, %5d code points: %s\n",
+				$from, $to, $range, $filename));
+		}
+		else {
+			fwrite(STDERR, "*** missing: " . $block["name"] . " ***\n");
+		}
+
+		ImageDestroy($canvas);
+	}
+
+	ImageDestroy($cell_image);
+	ImageDestroy($cell_image_bi);
+}
+
+/*
+ * app utils
+ */
+
+function parse_arg ()
+{
+	global $argv;
+	global $hex_dir, $gryph_dir, $block_filename;
+
+	$result = true;
+	$tmpargv = $argv;
+	array_shift($tmpargv);
+
+	foreach ($tmpargv as $arg) {
+		if (preg_match('/^--hex=(.+)$/', $arg, $re)) {
+			$hex_dir = $re[1];
+		}
+		else if (preg_match('/^--gryph=(.+)$/', $arg, $re)) {
+			$gryph_dir = $re[1];
+		}
+		else if (preg_match('/^--block=(.+)$/', $arg, $re)) {
+			$block_filename = $re[1];
+		}
+		else {
+			$result = false;
+		}
+	}
+
+	return $result;
+}
+
+function print_help ()
+{
+	global $argv;
+
+	fwrite(STDERR, <<<_END_
+{$argv[0]}: convert unifont hex data to ufo gryph image
+
+	--hex=<path/to/unifont/hex/data/dir>
+	--gryph=<path/to/output/images/dir>
+	--block=<path/to/Blocks.txt>
+
+
+_END_
+);
+}
+
+/*
+ * entry point
+ */
+
+try {
+	$argv[0] = basename($argv[0]);
+	if (!parse_arg()) {
+		print_help();
+		exit(1);
+	}
+
+	if ($hex_dir == "") {
+		fwrite(STDERR, "{$argv[0]}: missing hex dir.\n");
+		exit(1);
+	}
+
+	if ($gryph_dir == "") {
+		fwrite(STDERR, "{$argv[0]}: missing gryph dir.\n");
+		exit(1);
+	}
+
+	if ($block_filename == "") {
+		fwrite(STDERR, "{$argv[0]}: missing Block.txt.\n");
+		exit(1);
+	}
+
+	fwrite(STDERR, "       hex_dir: " . $hex_dir . "\n");
+	fwrite(STDERR, "     gryph_dir: " . $gryph_dir . "\n");
+	fwrite(STDERR, "block_filename: " . $block_filename . "\n");
+	fwrite(STDERR, "\n");
+
+	$block_data = read_block($block_filename);
+	$hex_data = read_hex($hex_dir);
+
+	if (count($hex_data) != BMP_CODEPOINTS) {
+		fwrite(STDERR,
+			"{$argv[0]}: invalid code point count: "
+			. count($hex_data)
+			. "\n");
+		exit(1);
+	}
+
+	$digit_image = ImageCreateFromPng("image/hexdigit.png");
+	make_gryph();
+	ImageDestroy($digit_image);
+}
+catch (Exception $e) {
+	fwrite(STDERR, "{$argv[0]}: Exception: " . $e->getMessage() . "\n");
+	exit(1);
+}

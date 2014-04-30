@@ -1,0 +1,41 @@
+# Citation Notes
+
+Following files in this directory are copied from:
+
+* jiskan font
+
+  jiskan/jiskan16-2004-1.bdf
+  jiskan/jiskan16-2000-2.bdf
+
+  http://www12.ocn.ne.jp/~imamura/jisx0213.html
+
+* shinonome font
+
+  shinonome/shnmk16.bdf
+
+  http://openlab.ring.gr.jp/efont/shinonome/
+
+* translate-data
+
+  translate-data/jisx0213-2004-8bit-std.txt
+
+  http://x0213.org/codetable/
+
+* unicode
+
+  unicode/Blocks.txt
+
+  http://www.unicode.org/Public/UNIDATA/
+
+* unifont
+
+  unifont/hangul-syllables.hex
+  unifont/nonprinting.hex
+  unifont/omit.hex
+  unifont/pua.hex
+  unifont/spaces.hex
+  unifont/unassigned.hex
+  unifont/unifont-base.hex
+  unifont/wqy.hex
+
+  http://unifoundry.com/unifont.html

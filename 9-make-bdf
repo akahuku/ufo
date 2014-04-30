@@ -1,0 +1,3 @@
+#!/bin/sh
+bin/hex2bdf build/ufo.hex > build/ufo.bdf
+bdftopcf -t build/ufo.bdf > build/ufo.pcf

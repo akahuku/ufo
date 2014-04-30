@@ -1,0 +1,387 @@
+#!/usr/bin/php
+<?php
+require_once dirname(__FILE__) . "/../lib/defines.php";
+
+/*
+ * globals
+ */
+
+$source_files = array();
+$hex_dir = "";
+$gryph_dir = "";
+$block_filename = "";
+$translate_filename = "";
+
+$block_data = null;
+$hex_data = null;
+$translate_data = null;
+
+/*
+ * functions
+ */
+
+function read_translate_data ($filename)
+{
+	$translate_data = array();
+
+	$fp = @fopen($filename, "rb");
+	if (!$fp) {
+		throw new Exception("cannot open the file [$filename]. stop.");
+	}
+
+	while (($line = fgets($fp)) !== false) {
+		$line = trim($line);
+
+		if (!preg_match('/^0x([0-9A-F]{4})\s+U\+([0-9A-F]{4})\s+/', $line, $re)) {
+			continue;
+		}
+
+		$jis_code = intval($re[1], 16);
+		$codepoint = intval($re[2], 16);
+
+		if (preg_match('/Fullwidth:\s*U\+([0-9A-F]{4})/', $line, $re)) {
+			$codepoint = intval($re[1], 16);
+		}
+
+		$translate_data[$jis_code] = $codepoint;
+	}
+
+	fclose($fp);
+
+	fwrite(STDERR, sprintf(
+		"jis->ucs2 translate data: %d entries.\n",
+		count($translate_data)));
+
+	return $translate_data;
+
+}
+
+function read_jiskan ()
+{
+	global $source_files;
+	global $hex_data;
+	global $translate_data;
+
+	$result = array();
+	foreach ($source_files as $source) {
+		if (!file_exists($source)) {
+			fwrite(STDERR, sprintf(
+				"BDF file not found: %s, skip.\n",
+				$source));
+			continue;
+		}
+
+		$fp = @fopen($source, "rb");
+		if (!$fp) {
+			fwrite(STDERR, sprintf(
+				"cannot open BDF file %s, skip.\n",
+				$source));
+			continue;
+		}
+
+		fwrite(STDERR, sprintf("processing %s...", $source));
+
+		$in_char_section = false;
+		$in_bitmap = false;
+		$bitmaps = array();
+		$current_jis_code = 0;
+		$count = 0;
+		while (($line = fgets($fp)) !== false) {
+			$line = trim($line);
+
+			if ($in_char_section) {
+				if (preg_match('/^ENDCHAR/', $line)) {
+					if (isset($translate_data[$current_jis_code])) {
+						$codepoint = $translate_data[$current_jis_code];
+
+						if (isset($hex_data[$codepoint])) {
+							if (count($hex_data[$codepoint]) == FONT_HEIGHT * 2) {
+								$result[$codepoint] = $bitmaps;
+							}
+							/*
+							else {
+								fprintf(STDERR, sprintf(
+									"Single width: 0x%04X -> U+%04X. skip.\n",
+									$current_jis_code, $codepoint));
+							}
+							 */
+						}
+						else {
+							fprintf(STDERR, sprintf(
+								"Invalid code point: 0x%04X -> U+%04X. skip.\n",
+								$current_jis_code, $codepoint));
+						}
+					}
+
+					$in_char_section = false;
+					$in_bitmap = false;
+					$bitmaps = array();
+					$current_jis_code = 0;
+
+					continue;
+				}
+
+				if ($in_bitmap) {
+					if (preg_match('/^([0-9a-fA-F]{4})/', $line, $re)) {
+						$bitmaps[] = intval(substr($re[1], 0, 2), 16);
+						$bitmaps[] = intval(substr($re[1], 2, 2), 16);
+					}
+					else {
+						fwrite(STDERR, sprintf(
+							"Invalid bitmap: %s in entry %d\n",
+							$line, $current_jis_code));
+					}
+				}
+				else {
+					if (preg_match('/^BITMAP/', $line)) {
+						$in_bitmap = true;
+					}
+				}
+			}
+			else {
+				// jiskan font
+				if (preg_match('/^STARTCHAR\s+(\d+)-(\d+)-(\d+)/', $line, $re)) {
+					$in_char_section = true;
+					$offset = intval($re[1]) == 1 ? 0x20 : 0xa0;
+					$current_jis_code = ((intval($re[2], 10) + $offset) << 8)
+						| (intval($re[3], 10) + $offset);
+					$count++;
+				}
+				// shinonome font
+				elseif (preg_match('/^STARTCHAR\s+([0-9A-Fa-f]+)/', $line, $re)) {
+					$in_char_section = true;
+					$current_jis_code = intval($re[1], 16);
+					$count++;
+				}
+			}
+		}
+
+		fclose($fp);
+
+		fwrite(STDERR, sprintf("%d entries.\n", $count));
+	}
+
+	fwrite(STDERR, sprintf(
+		"jiskan: %d entries.\n",
+		count($result)));
+
+	return $result;
+}
+
+function get_block ($codepoint)
+{
+	global $block_data;
+
+	foreach ($block_data as $block) {
+		if ($block["from"] <= $codepoint && $codepoint <= $block["to"]) {
+			return $block;
+		}
+	}
+
+	return null;
+}
+
+function draw_buffer ($image, $x, $y, $data)
+{
+	$color = ImageColorAllocate($image, 0, 0, 0);
+	$count = count($data);
+	if ($count == FONT_HEIGHT * 2) {
+		for ($i = 0; $i < $count; $i += 2, $y++) {
+			$offsetx = 0;
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i + 1] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+		}
+	}
+	elseif ($count == FONT_HEIGHT) {
+		for ($i = 0; $i < $count; $i++, $y++) {
+			$offsetx = 0;
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+		}
+	}
+}
+
+function make_gryph ($hex)
+{
+	global $gryph_dir;
+	global $hex_data;
+
+	$gryphs = array();
+
+	$cell_image = create_cell_image(CELL_WIDTH, CELL_HEIGHT, true);
+	foreach ($hex as $codepoint => $data) {
+		$block = get_block($codepoint);
+		if (!$block) {
+			continue;
+		}
+
+		$index = $block["index"];
+		if (isset($gryphs[$index])) {
+			$canvas = $gryphs[$index]["canvas"];
+		}
+		else {
+			$range = $block["to"] - $block["from"] + 1;
+			$canvas_width = (GRID_HORZ_COUNT + 2) * CELL_WIDTH;
+			$canvas_height = (ceil($range / GRID_HORZ_COUNT) + 2) * CELL_HEIGHT;
+			$canvas = ImageCreateTruecolor($canvas_width, $canvas_height);
+			ImageAlphaBlending($canvas, false);
+			ImageFilledrectangle(
+				$canvas,
+				0, 0, $canvas_width - 1, $canvas_height,
+				ImageColorAllocateAlpha($canvas, 0, 0, 0, 127));
+
+			$gryphs[$index] = array(
+				"canvas" => $canvas,
+				"block" => $block
+			);
+		}
+
+		$x = ($codepoint - $block["from"]) % GRID_HORZ_COUNT;
+		$y = floor(($codepoint - $block["from"]) / GRID_HORZ_COUNT);
+		$px = ($x + 1) * CELL_WIDTH;
+		$py = ($y + 1) * CELL_HEIGHT;
+
+		ImageCopy(
+			$canvas, $cell_image,
+			$px, $py,
+			0, 0, CELL_WIDTH - 1, CELL_HEIGHT - 1);
+		draw_buffer($canvas, $px + CELL_MARGIN, $py + CELL_MARGIN, $data);
+	}
+	ImageDestroy($cell_image);
+
+	usort($gryphs, function ($a, $b) {
+		return $a["block"]["index"] - $b["block"]["index"];
+	});
+
+	foreach ($gryphs as $gryph) {
+		$canvas = $gryph["canvas"];
+		$block = $gryph["block"];
+		$filename = $gryph_dir
+			. "/"
+			. get_gryph_filename($block["index"], $block["name"]);
+
+		fwrite(STDERR, $filename . "\n");
+
+		ImageSaveAlpha($canvas, true);
+		ImagePng($canvas, $filename, 9);
+		ImageDestroy($canvas);
+	}
+}
+
+/*
+ * app utils
+ */
+
+function parse_arg ()
+{
+	global $argv;
+	global $source_files,
+		$hex_dir, $gryph_dir,
+		$block_filename, $translate_filename;
+
+	$result = true;
+	$tmpargv = $argv;
+	array_shift($tmpargv);
+
+	foreach ($tmpargv as $arg) {
+		if (preg_match('/^--hex=(.+)$/', $arg, $re)) {
+			$hex_dir = $re[1];
+		}
+		elseif (preg_match('/^--gryph=(.+)$/', $arg, $re)) {
+			$gryph_dir = $re[1];
+		}
+		elseif (preg_match('/^--block=(.+)$/', $arg, $re)) {
+			$block_filename = $re[1];
+		}
+		elseif (preg_match('/^--translate=(.+)$/', $arg, $re)) {
+			$translate_filename = $re[1];
+		}
+		else {
+			$source_files[] = $arg;
+		}
+	}
+
+	return $result;
+}
+
+function print_help ()
+{
+	global $argv;
+
+	fwrite(STDERR, <<<_END_
+{$argv[0]}: convert jiskan16.bdf to convert ufo gryph image
+
+usage: {$argv[0]} [options] jiskan16-bdf-files...
+options:
+	--gryph=<path/to/gryph/images/dir>
+	--block=<path/to/Blocks.txt>
+
+
+_END_
+);
+}
+
+/*
+ * entry point
+ */
+
+try {
+	$argv[0] = basename($argv[0]);
+	if (!parse_arg()) {
+		print_help();
+		exit(1);
+	}
+
+	if ($hex_dir == "") {
+		fwrite(STDERR, "{$argv[0]}: missing hex dir.\n");
+		exit(1);
+	}
+
+	if ($gryph_dir == "") {
+		fwrite(STDERR, "{$argv[0]}: missing gryph dir.\n");
+		exit(1);
+	}
+
+	if ($block_filename == "") {
+		fwrite(STDERR, "{$argv[0]}: missing Block.txt.\n");
+		exit(1);
+	}
+
+	if ($translate_filename == "") {
+		fwrite(STDERR, "{$argv[0]}: missing translate data.\n");
+		exit(1);
+	}
+
+	if (count($source_files) == 0) {
+		fwrite(STDERR, "{$argv[0]}: missing target BDF files.\n");
+		exit(1);
+	}
+
+	fwrite(STDERR, "           hex_dir: " . $hex_dir . "\n");
+	fwrite(STDERR, "         gryph dir: " . $gryph_dir . "\n");
+	fwrite(STDERR, "    block_filename: " . $block_filename . "\n");
+	fwrite(STDERR, "translate_filename: " . $translate_filename . "\n");
+	fwrite(STDERR, "\n");
+
+	$block_data = read_block($block_filename);
+	$hex_data = read_hex($hex_dir);
+	$translate_data = read_translate_data($translate_filename);
+
+	$jiskan_hex = read_jiskan();
+	make_gryph($jiskan_hex);
+}
+catch (Exception $e) {
+	fwrite(STDERR, "{$argv[0]}: Exception: " . $e->getMessage() . "\n");
+	exit(1);
+}

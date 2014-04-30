@@ -1,0 +1,191 @@
+#!/usr/bin/php
+<?php
+require_once dirname(__FILE__) . "/../lib/defines.php";
+
+/*
+ * globals
+ */
+
+$hex_filename = "";
+
+$copyright = "public domain";
+$font_name = "UFO" . FONT_HEIGHT;
+$version = "1.0";
+
+/*
+ * functions
+ */
+
+function output ()
+{
+	global $hex_filename, $copyright, $font_name, $version;
+	global $cap_height, $x_height, $baseline;
+
+	$fp = @fopen($hex_filename, "rb");
+	if (!$fp) {
+		throw new Exception("cannot open the file [$hex_filename]. stop.");
+	}
+
+	$data = array();
+	while (($line = fgets($fp)) !== false) {
+		if (!preg_match('/^([0-9a-f]+):([0-9a-f]+)/i', $line, $re)) {
+			continue;
+		}
+		$data[intval($re[1], 16)] = $re[2];
+	}
+	ksort($data, SORT_NUMERIC);
+
+	$vpixels = FONT_HEIGHT;
+	$point_size = FONT_HEIGHT;
+	$point_size10 = FONT_HEIGHT * 10;
+	$nchars = count($data);
+	if ($nchars != BMP_CODEPOINTS) {
+		throw new Exception("number of code point does not match to valid value: " . $nchars);
+	}
+	$nchars_actual = $nchars - (6400 + 2);
+
+	$bdf_ascent = FONT_HEIGHT - $baseline;
+	$bdf_descent = $baseline;
+	$bdf_cap_height = $cap_height;
+	$bdf_x_height = $x_height;
+
+	echo <<<_END_
+STARTFONT 2.1
+FONT -appsweets-$font_name-Medium-R-Normal-Sans-$vpixels-$point_size10-75-75-c-80-iso10646-1
+SIZE $point_size 75 75
+FONTBOUNDINGBOX $vpixels $vpixels 0 -2
+STARTPROPERTIES 24
+COPYRIGHT "$copyright"
+FONT_VERSION "$version"
+FONT_TYPE "Bitmap"
+FOUNDRY "AppSweets.net"
+FAMILY_NAME "$font_name"
+WEIGHT_NAME "Medium"
+SLANT "R"
+SETWIDTH_NAME "Normal"
+ADD_STYLE_NAME "Sans Serif"
+PIXEL_SIZE $vpixels
+POINT_SIZE $point_size10
+RESOLUTION_X 75
+RESOLUTION_Y 75
+SPACING "C"
+AVERAGE_WIDTH 80
+CHARSET_REGISTRY "ISO10646"
+CHARSET_ENCODING "1"
+UNDERLINE_POSITION -2
+UNDERLINE_THICKNESS 1
+CAP_HEIGHT $bdf_cap_height
+X_HEIGHT $bdf_x_height
+FONT_ASCENT $bdf_ascent
+FONT_DESCENT $bdf_descent
+DEFAULT_CHAR 65533
+ENDPROPERTIES
+CHARS $nchars_actual
+
+_END_;
+
+	fwrite(STDERR, "\n");
+	foreach ($data as $index => $gryph) {
+		// special treatment
+		if ($index >= 0xe000 && $index <= 0xf8ff
+		|| $index == 0xfffe || $index == 0xffff) {
+			continue;
+		}
+
+		$width = strlen($gryph) / $vpixels;
+		$scalable_width = (1000 * $width) / ($vpixels / 4);
+		$device_width = $width * 4;
+		$gryph = preg_replace("/((.){" . $width . "})/", "\n$1", $gryph);
+		$start_char = sprintf("%04X", $index);
+
+		echo <<<_END_
+STARTCHAR U+$start_char
+ENCODING $index
+SWIDTH $scalable_width 0
+DWIDTH $device_width 0
+BBX $device_width $vpixels 0 -2
+BITMAP $gryph
+ENDCHAR
+
+_END_;
+
+		if ($index % 2048 == 0) {
+			fwrite(STDERR, sprintf("\r%d of %d...", $index, $nchars));
+		}
+	}
+
+	echo "ENDFONT\n";
+
+	fwrite(STDERR, "done.\n");
+}
+
+/*
+ * app utils
+ */
+
+function parse_arg ()
+{
+	global $argv;
+	global $hex_filename, $copyright, $font_name, $version;
+
+	$result = true;
+	$tmpargv = $argv;
+	array_shift($tmpargv);
+
+	foreach ($tmpargv as $arg) {
+		if (preg_match('/^--copyright=(.+)$/', $arg, $re)) {
+			$copyright = $re[1];
+		}
+		else if (preg_match('/^--fontname=(.+)$/', $arg, $re)) {
+			$font_name = $re[1];
+		}
+		else if (preg_match('/^--version=(.+)$/', $arg, $re)) {
+			$version = $re[1];
+		}
+		else {
+			if ($hex_filename == "") {
+				$hex_filename = $arg;
+			}
+			else {
+				$result = false;
+			}
+		}
+	}
+
+	return $result;
+}
+
+function print_help ()
+{
+	global $argv;
+
+	fwrite(STDERR, <<<_END_
+{$argv[0]}: convert unifont hex data to BDF format font
+
+	--copyright=<copyright string>
+	--fontname=<font name string>
+	--version=<version string>
+
+
+_END_
+);
+}
+
+/*
+ * entry point
+ */
+
+try {
+	$argv[0] = basename($argv[0]);
+	if (!parse_arg()) {
+		print_help();
+		exit(1);
+	}
+
+	output();
+}
+catch (Exception $e) {
+	fwrite(STDERR, "{$argv[0]}: Exception: " . $e->getMessage() . "\n");
+	exit(1);
+}
+
