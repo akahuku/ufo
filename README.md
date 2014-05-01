@@ -1,4 +1,4 @@
-# UFO: unicode bitmap font
+# UFO: Unicode Font, Organized
 
 
 
@@ -27,22 +27,21 @@ UFO はその点を解決するために製作されたフォントです。
 
 UFO は一部のコードポイントについて独自にデザインしたグリフを用いていますが、
 それ以外のコードポイントについては既存のフリービットマップフォントを大いに利
-用しています。
+用しています。"UFO" のネーミングの由来もまたそこにあります。
 
-* Unifont <GPL v2.0 with font embedding exception>
+* Unifont by GNU (GPL v2.0 with font embedding exception)
 
   unifont-6.3.20140214.bdf
   http://unifoundry.com/unifont.html
 
-* jiskan16 <Public Domain>
+* Bitmap Song by Wen Quan Yi Project (GPL v2.0 with font embedding exception)
 
-  jiskan16-2004-1.bdf
-  jiskan16-2000-2.bdf
-  http://www12.ocn.ne.jp/~imamura/jisx0213.html
+  wenquanyi_11pt.bdf
+  http://wenq.org/wqy2/index.cgi?action=browse&id=Home&lang=en
 
-* 東雲フォント <Public Domain>
+* 東雲フォント (Public Domain)
 
-  shnmk16.bdf
+  shnmk14.bdf
   http://openlab.ring.gr.jp/efont/shinonome/
 
 * UFO 独自のグリフ
@@ -59,7 +58,7 @@ UFO は一部のコードポイントについて独自にデザインしたグ�
 
 ## ライセンスは？
 
-Unifont のグリフを使用していますので、UFO も
+Unifont および Wen Quan Yi のグリフを使用していますので、UFO も
 
   GPL v2.0 with font embedding exception
 

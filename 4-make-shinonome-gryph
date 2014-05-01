@@ -1,0 +1,15 @@
+#!/bin/sh
+
+#bin/png2hex \
+#	--png=src/shinonome/shinonome-14px.png \
+#	--bdf=src/shinonome/shnmk14.bdf \
+#	--hex=src/hex/shinonome/shnmk14.hex \
+#	--translate=src/translate-data/jisx0213-2004-8bit-std.txt \
+#	--cell=16,16 --offset=1,1
+
+bin/hex2gryph \
+	--hex=src/hex/shinonome \
+	--gryph=gryph/02-shinonome14 \
+	--block=src/unicode/Blocks.txt \
+	--block-include=106,107,108,119,160 \
+	--transparent

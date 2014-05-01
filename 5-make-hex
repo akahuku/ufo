@@ -1,4 +1,0 @@
-#!/bin/sh
-exec bin/gryph2hex \
-	--gryph=gryph \
-	--block=src/unicode/Blocks.txt > build/ufo.hex

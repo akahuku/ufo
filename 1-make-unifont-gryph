@@ -1,5 +1,5 @@
 #!/bin/sh
 exec bin/hex2gryph \
-	--hex=src/unifont \
+	--hex=src/hex/unifont \
 	--gryph=gryph/00-unifont \
 	--block=src/unicode/Blocks.txt

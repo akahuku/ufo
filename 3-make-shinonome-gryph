@@ -1,7 +1,0 @@
-#!/bin/sh
-exec bin/jiskan2gryph \
-	--hex=src/unifont \
-	--gryph=gryph/02-shinonome \
-	--block=src/unicode/Blocks.txt \
-	--translate=src/translate-data/jisx0213-2004-8bit-std.txt \
-	src/shinonome/shnmk16.bdf

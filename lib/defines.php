@@ -205,6 +205,42 @@ function read_hex ($input_dir)
 	return $buffer;
 }
 
+function read_translate_data ($filename)
+{
+	$translate_data = array();
+
+	$fp = @fopen($filename, "rb");
+	if (!$fp) {
+		throw new Exception("cannot open the file [$filename]. stop.");
+	}
+
+	while (($line = fgets($fp)) !== false) {
+		$line = trim($line);
+
+		if (!preg_match('/^0x([0-9A-F]{4})\s+U\+([0-9A-F]{4})\s+/', $line, $re)) {
+			continue;
+		}
+
+		$jis_code = intval($re[1], 16);
+		$codepoint = intval($re[2], 16);
+
+		if (preg_match('/Fullwidth:\s*U\+([0-9A-F]{4})/', $line, $re)) {
+			$codepoint = intval($re[1], 16);
+		}
+
+		$translate_data[$jis_code] = $codepoint;
+	}
+
+	fclose($fp);
+
+	fwrite(STDERR, sprintf(
+		"jis->ucs2 translate data: %d entries.\n",
+		count($translate_data)));
+
+	return $translate_data;
+
+}
+
 function get_gryph_filename ($block_index, $block_name)
 {
 	return sprintf("%03d", $block_index) . "-"

@@ -9,6 +9,8 @@ require_once dirname(__FILE__) . "/../lib/defines.php";
 $hex_dir = "";
 $gryph_dir = "";
 $block_filename = "";
+$block_include = null;
+$transparent = false;
 
 $block_data = null;
 $hex_data = null;
@@ -76,7 +78,9 @@ function draw_buffer ($image, $x, $y, $cp)
 
 function make_gryph ()
 {
-	global $hex_data, $block_data, $gryph_dir;
+	global $hex_data, $gryph_dir;
+	global $block_data, $block_include;
+	global $transparent;
 
 	$cell_image = create_cell_image(CELL_WIDTH, CELL_HEIGHT, false);
 	$cell_image_bi = create_cell_image(CELL_WIDTH, CELL_HEIGHT, true);
@@ -88,11 +92,24 @@ function make_gryph ()
 		$range = $to - $from + 1;
 		$canvas_height = (ceil($range / GRID_HORZ_COUNT) + 2) * CELL_HEIGHT;
 
+		if ($block_include && !in_array($block["index"], $block_include)) {
+			continue;
+		}
+
 		$canvas = ImageCreateTruecolor($canvas_width, $canvas_height);
-		ImageFilledrectangle(
-			$canvas,
-			0, 0, $canvas_width - 1, $canvas_height - 1,
-			ImageColorAllocate($cell_image, 255, 255, 255));
+		if ($transparent) {
+			ImageAlphaBlending($canvas, false);
+			ImageFilledrectangle(
+				$canvas,
+				0, 0, $canvas_width - 1, $canvas_height,
+				ImageColorAllocateAlpha($canvas, 0, 0, 0, 127));
+		}
+		else {
+			ImageFilledrectangle(
+				$canvas,
+				0, 0, $canvas_width - 1, $canvas_height - 1,
+				ImageColorAllocate($cell_image, 255, 255, 255));
+		}
 
 		$copied = false;
 		for ($i = $from; $i <= $to; $i++) {
@@ -119,7 +136,7 @@ function make_gryph ()
 			$px = ($x + 1) * CELL_WIDTH;
 			$py = ($y + 1) * CELL_HEIGHT;
 
-			if ($y == 0) {
+			if ($y == 0 && !$transparent) {
 				draw_digit($canvas, $px, $py - 12, $x & 0x000f);
 
 				if ($x % 16 == 0) {
@@ -140,6 +157,7 @@ function make_gryph ()
 			$filename = $gryph_dir
 				. "/"
 				. get_gryph_filename($block_index, $block["name"]);
+			ImageSaveAlpha($canvas, true);
 			ImagePng($canvas, $filename, 9);
 
 			fwrite(STDERR, sprintf(
@@ -164,7 +182,9 @@ function make_gryph ()
 function parse_arg ()
 {
 	global $argv;
-	global $hex_dir, $gryph_dir, $block_filename;
+	global $hex_dir, $gryph_dir,
+		$block_filename, $block_include,
+		$transparent;
 
 	$result = true;
 	$tmpargv = $argv;
@@ -179,6 +199,15 @@ function parse_arg ()
 		}
 		else if (preg_match('/^--block=(.+)$/', $arg, $re)) {
 			$block_filename = $re[1];
+		}
+		else if (preg_match('/^--block-include=(.+)$/', $arg, $re)) {
+			$block_include = array_map(function ($n) {
+				$n = trim($n);
+				return preg_match('/^\d+$/', $n) ? $n - 0 : -1;
+			}, explode(",", $re[1]));
+		}
+		else if (preg_match('/^--transparent$/', $arg, $re)) {
+			$transparent = true;
 		}
 		else {
 			$result = false;
@@ -198,6 +227,7 @@ function print_help ()
 	--hex=<path/to/unifont/hex/data/dir>
 	--gryph=<path/to/output/images/dir>
 	--block=<path/to/Blocks.txt>
+	--transparent
 
 
 _END_
@@ -238,7 +268,7 @@ try {
 	$block_data = read_block($block_filename);
 	$hex_data = read_hex($hex_dir);
 
-	if (count($hex_data) != BMP_CODEPOINTS) {
+	if (!$transparent && count($hex_data) != BMP_CODEPOINTS) {
 		fwrite(STDERR,
 			"{$argv[0]}: invalid code point count: "
 			. count($hex_data)
@@ -246,7 +276,7 @@ try {
 		exit(1);
 	}
 
-	$digit_image = ImageCreateFromPng("image/hexdigit.png");
+	$digit_image = ImageCreateFromPng("src/image/hexdigit.png");
 	make_gryph();
 	ImageDestroy($digit_image);
 }
