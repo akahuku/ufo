@@ -3,4 +3,4 @@ bin/gryph2hex \
 	--gryph=gryph \
 	--block=src/unicode/Blocks.txt > build/ufo.hex
 
-../unifont-6.3.20140214/bin/unifontpic < build/ufo.hex > build/ufo.bmp
+#../unifont-6.3.20140214/bin/unifontpic < build/ufo.hex > build/ufo.bmp

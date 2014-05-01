@@ -2,26 +2,25 @@
 
 Following files in this directory are copied from:
 
-* jiskan font
+* K14 font
 
-  jiskan/jiskan16-2004-1.bdf
-  jiskan/jiskan16-2000-2.bdf
+  K14-2004-1.bdf
+  K14-2000-2.bdf
 
   http://www12.ocn.ne.jp/~imamura/jisx0213.html
 
 * shinonome font
 
-  shinonome/shnmk16.bdf
-
+  shinonome/shnmk14.bdf
   http://openlab.ring.gr.jp/efont/shinonome/
 
-* translate-data
+* jis code to unicode codepoint translate table
 
   translate-data/jisx0213-2004-8bit-std.txt
 
   http://x0213.org/codetable/
 
-* unicode
+* unicode data
 
   unicode/Blocks.txt
 
@@ -29,13 +28,19 @@ Following files in this directory are copied from:
 
 * unifont
 
-  unifont/hangul-syllables.hex
-  unifont/nonprinting.hex
-  unifont/omit.hex
-  unifont/pua.hex
-  unifont/spaces.hex
-  unifont/unassigned.hex
-  unifont/unifont-base.hex
-  unifont/wqy.hex
+  hex/unifont/hangul-syllables.hex
+  hex/unifont/nonprinting.hex
+  hex/unifont/omit.hex
+  hex/unifont/pua.hex
+  hex/unifont/spaces.hex
+  hex/unifont/unassigned.hex
+  hex/unifont/hex/unifont-base.hex
+  hex/unifont/wqy.hex
 
   http://unifoundry.com/unifont.html
+
+* Bitmap Song
+
+  wqy/wenquanyi_11pt.bdf
+
+  http://wenq.org/wqy2/index.cgi?action=browse&id=Home&lang=en
