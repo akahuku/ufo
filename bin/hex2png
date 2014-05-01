@@ -1,0 +1,238 @@
+#!/usr/bin/php
+<?php
+require_once dirname(__FILE__) . "/../lib/defines.php";
+
+/*
+ * globals
+ */
+
+$hex_filename = "";
+$png_filename = "";
+$block_filename = "";
+
+$hex_data = array();
+$block_data = null;
+
+/*
+ * functions
+ */
+
+function draw_ascii ($image, $x, $y, $s)
+{
+	for ($i = 0, $goal = strlen($s); $i < $goal; $i++) {
+		$codepoint = ord($s[$i]);
+		if (0 <= $codepoint && $codepoint < 128) {
+			draw_buffer($image, $x, $y, $codepoint);
+		}
+		$x += FONT_WIDTH;
+	}
+}
+
+function draw_buffer ($image, $x, $y, $cp)
+{
+	global $hex_data;
+
+	if (!isset($hex_data[$cp])) {
+		return;
+	}
+
+	$data = $hex_data[$cp];
+	$color = ImageColorAllocate($image, 0, 0, 0);
+	$count = count($data);
+	if ($count == FONT_HEIGHT * 2) {
+		for ($i = 0; $i < $count; $i += 2, $y++) {
+			$offsetx = 0;
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i + 1] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+		}
+	}
+	elseif ($count == FONT_HEIGHT) {
+		for ($i = 0; $i < $count; $i++, $y++) {
+			$offsetx = 0;
+			for ($j = 128; $j >= 1; $j >>= 1, $offsetx++) {
+				if ($data[$i] & $j) {
+					ImageSetPixel($image, $x + $offsetx, $y, $color);
+				}
+			}
+		}
+	}
+}
+
+function make_png ()
+{
+	global $hex_filename, $png_filename, $block_data, $hex_data;
+
+	// calculate entire size of the canvas
+	$cell_horz_num = 256;
+	$cell_vert_num = 0;
+	$tmp_block_data = $block_data;
+
+	foreach ($tmp_block_data as $block_index => $block) {
+		$from = $block["from"] & 0xff00;
+		$to = $block["to"];
+		$block_height = ceil(($to - $from + 1) / $cell_horz_num) + 1;
+		$tmp_block_data[$block_index]["base_y"] = $cell_vert_num + 2;
+		$cell_vert_num += $block_height;
+	}
+	
+	// draw gryphs
+	$cell_width = FONT_WIDTH * 2 + 1;
+	$cell_height = FONT_HEIGHT + 1;
+	$canvas = ImageCreateTrueColor(
+		$cell_width * ($cell_horz_num + 2),
+		$cell_height * ($cell_vert_num + 2));
+
+	// colors
+	$white = ImageColorAllocate($canvas, 255, 255, 255);
+	$light_gray = ImageColorAllocate($canvas, 224, 224, 224);
+	$gray = ImageColorAllocate($canvas, 192, 192, 192);
+	$red = ImageColorAllocate($canvas, 255, 0, 0);
+
+	ImageFilledrectangle($canvas,
+		0, 0, ImageSx($canvas) - 1, ImageSy($canvas) - 1,
+		$white);
+
+	foreach ($tmp_block_data as $block_index => $block) {
+		$from = $block["from"] & 0xff00;
+		$to = $block["to"];
+		$basex = $cell_width;
+		$basey = $block["base_y"] * $cell_height;
+
+		fwrite(STDERR, sprintf("%s(%d,%d) ", $block["name"], $block["base_y"], $basey));
+
+		ImageFilledRectangle($canvas,
+			$basex - 1, $basey - 1,
+			$basex + $cell_horz_num * $cell_width - 1,
+			$basey + ceil(($to - $from) / $cell_horz_num) * $cell_height - 1,
+			$light_gray);
+
+		draw_ascii($canvas,
+			$basex + (($block["from"] - $from) % $cell_horz_num) * $cell_width,
+			$basey - 1 - FONT_HEIGHT,
+			sprintf("%s (%d)", $block["name"], $to - $block["from"] + 1));
+
+		for ($i = $block["from"]; $i <= $to; $i++) {
+			if (!isset($hex_data[$i])) {
+				continue;
+			}
+
+			$px = $basex + (($i - $from) % $cell_horz_num) * $cell_width;
+			$py = $basey + floor(($i - $from) / $cell_horz_num) * $cell_height;
+			$font_width = count($hex_data[$i]) == FONT_HEIGHT * 2 ?
+				FONT_WIDTH * 2 : FONT_WIDTH;
+
+			ImageRectangle($canvas,
+				$px - 1, $py - 1,
+				$px + $font_width, $py + $cell_height - 1,
+				$gray);
+			ImageFilledRectangle($canvas,
+				$px, $py,
+				$px + $font_width - 1, $py + $cell_height - 2,
+				$white);
+
+			draw_buffer($canvas, $px, $py, $i);
+		}
+	}
+
+	fwrite(STDERR, "\nsaving image to $png_filename...\n");
+
+	ImagePng($canvas, $png_filename);
+	ImageDestroy($canvas);
+
+	fwrite(STDERR, "done.\n");
+}
+
+/*
+ * app utils
+ */
+
+function parse_arg ()
+{
+	global $argv;
+	global $hex_filename, $png_filename, $block_filename;
+
+	$result = true;
+	$tmpargv = $argv;
+	array_shift($tmpargv);
+	$files = 0;
+
+	foreach ($tmpargv as $arg) {
+		if (preg_match('/^--block=(.+)$/', $arg, $re)) {
+			$block_filename = $re[1];
+		}
+		elseif (!preg_match('/^--/', $arg)) {
+			switch ($files++) {
+			case 0:
+				$hex_filename = $tmpargv[0];
+				break;
+			case 1:
+				$png_filename = $tmpargv[1];
+				break;
+			}
+		}
+	}
+
+	return $result;
+}
+
+function print_help ()
+{
+	global $argv;
+
+	fwrite(STDERR, <<<_END_
+{$argv[0]}: generate png from a hex file
+
+usage: {$argv[0]} hex-file png-file
+
+
+_END_
+	);
+}
+
+/*
+ * entry point
+ */
+
+try {
+	$argv[0] = basename($argv[0]);
+	if (!parse_arg()) {
+		print_help();
+		exit(1);
+	}
+
+	if ($hex_filename == "") {
+		fwrite(STDERR, "{$argv[0]}: missing hex file name.\n");
+		exit(1);
+	}
+
+	if ($png_filename == "") {
+		fwrite(STDERR, "{$argv[0]}: missing png file name.\n");
+		exit(1);
+	}
+
+	if ($block_filename == "") {
+		fwrite(STDERR, "{$argv[0]}: missing Block.txt.\n");
+		exit(1);
+	}
+
+	fwrite(STDERR, " hex file name: " . $hex_filename . "\n");
+	fwrite(STDERR, " png file name: " . $png_filename . "\n");
+	fwrite(STDERR, "block_filename: " . $block_filename . "\n");
+	fwrite(STDERR, "\n");
+
+	read_hex_core($hex_filename, $hex_data);
+	$block_data = read_block($block_filename);
+	make_png();
+}
+catch (Exception $e) {
+	fwrite(STDERR, "{$argv[0]}: Exception: " . $e->getMessage() . "\n");
+	exit(1);
+}

@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#bin/png2hex \
+#	--png=src/wqy/wqy-11pt.png \
+#	--bdf=src/wqy/wenquanyi_11pt.bdf \
+#	--hex=src/hex/wqy/wenquanyi_11pt.hex \
+#	--cell=18,20 --offset=2,2
+
+bin/hex2gryph \
+	--hex=src/hex/wqy \
+	--gryph=gryph/01-wqy11 \
+	--block=src/unicode/Blocks.txt \
+	--block-include=102,103,105,106,107,108,109,110,111,113,117,119,151,157,160 \
+	--transparent
