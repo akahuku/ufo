@@ -40,15 +40,11 @@
 
 <ul>
 <li>Unicode の Basic Multilingal Plane をサポート</li>
-<li>端末エミュレータで使用することを想定した 8x16 と 16x16 の文字で構成される
-等幅フォント</li>
+<li>端末エミュレータで使用することを想定した 8x16 と 16x16 の文字で構成される等幅フォント</li>
 </ul><h2>
 <a name="%E3%81%9D%E3%82%8C%E3%81%A3%E3%81%A6-unifont-%E3%81%8C%E3%81%99%E3%81%A7%E3%81%AB%E3%81%82%E3%82%8B%E3%82%88%E3%81%AD%E4%BD%95%E3%81%8C%E9%81%95%E3%81%86%E3%81%AE" class="anchor" href="#%E3%81%9D%E3%82%8C%E3%81%A3%E3%81%A6-unifont-%E3%81%8C%E3%81%99%E3%81%A7%E3%81%AB%E3%81%82%E3%82%8B%E3%82%88%E3%81%AD%E4%BD%95%E3%81%8C%E9%81%95%E3%81%86%E3%81%AE"><span class="octicon octicon-link"></span></a>それって Unifont がすでにあるよね。何が違うの？</h2>
 
-<p>GNU のプロダクトである Unifont もまた、BMP の全領域をサポートするフォントであ
-り、その中には BDF フォントも含まれます。しかし、Unifont は CJK 系のコードポ
-イントについては WenQuanYi Project 由来のグリフを利用しており、これは日本語の
-文の表示にはあまり向いていません。</p>
+<p>GNU のプロダクトである Unifont もまた、BMP の全領域をサポートするフォントであり、その中には BDF フォントも含まれます。しかし、Unifont は CJK 系のコードポイントについては WenQuanYi Project 由来のグリフを利用しており、これは日本語の文の表示にはあまり向いていません。</p>
 
 <p>UFO はその点を解決するために製作されたフォントです。</p>
 
@@ -70,38 +66,30 @@
 <h2>
 <a name="ufo-%E3%83%95%E3%82%A9%E3%83%B3%E3%83%88%E3%81%AE%E3%82%B0%E3%83%AA%E3%83%95%E3%81%AF%E8%AA%B0%E3%81%8C%E4%BD%9C%E3%81%A3%E3%81%9F%E3%81%AE" class="anchor" href="#ufo-%E3%83%95%E3%82%A9%E3%83%B3%E3%83%88%E3%81%AE%E3%82%B0%E3%83%AA%E3%83%95%E3%81%AF%E8%AA%B0%E3%81%8C%E4%BD%9C%E3%81%A3%E3%81%9F%E3%81%AE"><span class="octicon octicon-link"></span></a>UFO フォントのグリフは誰が作ったの？</h2>
 
-<p>UFO は一部のコードポイントについて私（<a href="http://akahuku.github.com%EF%BC%89%E3%81%8C%E7%8B%AC%E8%87%AA%E3%81%AB">http://akahuku.github.com）が独自に</a>
-デザインしたグリフを用いていますが、それ以外のコードポイントについては既存の
-フリービットマップフォントを大いに利用しています。
-"UFO" のネーミングの由来もまたそこにあります。</p>
+<p>UFO は一部のコードポイントについて私（<a href="http://akahuku.github.com/">http://akahuku.github.com</a>）が独自に
+デザインしたグリフを用いていますが、それ以外のコードポイントについては既存のフリービットマップフォントを大いに利用しています。"UFO" のネーミングの由来もまたそこにあります。</p>
 
 <ul>
-<li>
-<p>Unifont by GNU (GPL v2.0 with font embedding exception)</p>
+<li><p>Unifont by GNU (GPL v2.0 with font embedding exception)</p>
 
 <p>unifont-6.3.20140214.bdf
 <a href="http://unifoundry.com/unifont.html">http://unifoundry.com/unifont.html</a></p>
 </li>
-<li>
-<p>Bitmap Song by Wen Quan Yi Project (GPL v2.0 with font embedding exception)</p>
+<li><p>Bitmap Song by Wen Quan Yi Project (GPL v2.0 with font embedding exception)</p>
 
 <p>wenquanyi_11pt.bdf
 <a href="http://wenq.org/wqy2/index.cgi?action=browse&amp;id=Home&amp;lang=en">http://wenq.org/wqy2/index.cgi?action=browse&amp;id=Home&amp;lang=en</a></p>
 </li>
-<li>
-<p>東雲フォント (Public Domain)</p>
+<li><p>東雲フォント (Public Domain)</p>
 
 <p>shnmk14.bdf
 <a href="http://openlab.ring.gr.jp/efont/shinonome/">http://openlab.ring.gr.jp/efont/shinonome/</a></p>
 </li>
-<li>
-<p>UFO 独自のグリフ</p>
+<li><p>UFO 独自のグリフ</p>
 
-<p>どのコードポイントが UFO 独自のグリフかは、
-gryph/05-ufo/ 以下の png イメージを参照してください。</p>
+<p>どのコードポイントが UFO 独自のグリフかは、gryph/05-ufo/ 以下の png イメージを参照してください。</p>
 </li>
-</ul><p>グリフの選択はこの順の通り、Unifont が最も低い優先度、下に行くに従ってグリフ
-が gryph/ 以下の png イメージに定義されていればそれを優先、という形式になって
+</ul><p>グリフの選択はこの順の通り、Unifont が最も低い優先度、下に行くに従ってグリフが gryph/ 以下の png イメージに定義されていればそれを優先、という形式になって
 います。</p>
 
 <h2>
@@ -109,7 +97,7 @@ gryph/05-ufo/ 以下の png イメージを参照してください。</p>
 
 <p>Unifont および Wen Quan Yi のグリフを使用していますので、UFO も</p>
 
-<p>GPL v2.0 with font embedding exception</p>
+<p><b>GPL v2.0 with font embedding exception</b></p>
 
 <p>になります。詳細は COPYING ファイルを参照してください。</p>
       </section>
