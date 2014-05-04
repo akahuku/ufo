@@ -23,21 +23,21 @@ UFO はその点を解決するために製作されたフォントです。
 
 ### 英語のグリフ
 
-[Latin gryph](http://appsweets.net/ufo/latin.png "Latin gryph")
+![Latin gryph](http://appsweets.net/ufo/latin.png "Latin gryph")
 
 ### 日本語のグリフ
 
-[日本語のグリフ](http://appsweets.net/ufo/japanese.png "日本語のグリフ")
+![日本語のグリフ](http://appsweets.net/ufo/japanese.png "日本語のグリフ")
 
 ### ソースコード
 
-[ソースコード](http://appsweets.net/ufo/source-code.png "ソースコード")
+![ソースコード](http://appsweets.net/ufo/source-code.png "ソースコード")
 
 
 
 ## UFO フォントのグリフは誰が作ったの？
 
-UFO は一部のコードポイントについて私（http://akahuku/github.com）が独自に
+UFO は一部のコードポイントについて私（ http://akahuku.github.com/ ）が独自に
 デザインしたグリフを用いていますが、それ以外のコードポイントについては既存の
 フリービットマップフォントを大いに利用しています。
 "UFO" のネーミングの由来もまたそこにあります。

@@ -14,23 +14,15 @@ SRC_DIR = src
 BUILD_DIR = build
 BIN_DIR = bin
 GRYPH_DIR = gryph
-
 UNIFONT_GRYPH_DIR =   $(GRYPH_DIR)/00-unifont
 WQY_GRYPH_DIR =       $(GRYPH_DIR)/01-wqy11
 SHINONOME_GRYPH_DIR = $(GRYPH_DIR)/02-shinonome14
 UFO_GRYPH_DIR =       $(GRYPH_DIR)/05-ufo
 
-UNIFONT_GRYPHS   = $(wildcard   $(UNIFONT_GRYPH_DIR)/*.png)
-WQY_GRYPHS       = $(wildcard       $(WQY_GRYPH_DIR)/*.png)
-SHINONOME_GRYPHS = $(wildcard $(SHINONOME_GRYPH_DIR)/*.png)
-UFO_GRYPHS       = $(wildcard       $(UFO_GRYPH_DIR)/*.png)
-
-ALL_GRYPHS = $(UNIFONT_GRYPHS) \
-             $(WQY_GRYPHS) \
-             $(SHINONOME_GRYPHS) \
-             $(UFO_GRYPHS)
+ALL_GRYPHS = $(shell find $(GRYPH_DIR)/[0-9]* -type f -name '*.png')
 
 UNICODE_BLOCK_FILE = $(SRC_DIR)/unicode/Blocks.txt
+UNICODE_WIDTH_FILE = $(SRC_DIR)/unicode/EastAsianWidth.txt
 WQY_BLOCKS = 102,103,105,109,110,111,113,117,151,157
 SHINONOME_BLOCKS = 106,107,108,119,160
 
@@ -95,6 +87,12 @@ shinonome-gryph: FORCE
 		--block=$(UNICODE_BLOCK_FILE) \
 		--block-include=$(SHINONOME_BLOCKS) \
 		--transparent
+
+check-width: FORCE
+	$(BIN_DIR)/checkwidth \
+		--hex=$(SRC_DIR)/hex/unifont \
+		--block=$(UNICODE_BLOCK_FILE) \
+		--width=$(UNICODE_WIDTH_FILE)
 
 # phony rules
 
