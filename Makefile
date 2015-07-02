@@ -106,4 +106,8 @@ clean: FORCE
 	-rm $(BUILD_DIR)/ufo.pcf.gz
 	-rm $(BUILD_DIR)/ufo.png
 
-.PHONY: all clean
+install: FORCE
+	cp $(BUILD_DIR)/ufo.pcf ~/.fonts/
+	fc-cache -f
+
+.PHONY: all clean install
